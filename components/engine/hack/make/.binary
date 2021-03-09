@@ -67,12 +67,20 @@ if [ "$(go env GOOS)/$(go env GOARCH)" != "$(go env GOHOSTOS)/$(go env GOHOSTARC
 			export CC=x86_64-linux-gnu-gcc
 			export CGO_ENABLED=1
 			;;
+		linux/ppc64le)
+			export CC=powerpc64le-linux-gnu-gcc
+			export CGO_ENABLED=1
+			;;
+		linux/ppc64)
+			export CC=powerpc64-linux-gnu-gcc
+			export CGO_ENABLED=1
+			;;
 	esac
 fi
 
 # -buildmode=pie is not supported on Windows and Linux on mips.
 case "$(go env GOOS)/$(go env GOARCH)" in
-	windows/*|linux/mips*)
+	windows/*|linux/mips*|linux/ppc64)
 		;;
 	*)
 		BUILDFLAGS+=( "-buildmode=pie" )

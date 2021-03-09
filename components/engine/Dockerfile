@@ -36,6 +36,33 @@ RUN sed -ri "s/(httpredir|deb).debian.org/${APT_MIRROR:-deb.debian.org}/g" /etc/
  && sed -ri "s/(security).debian.org/${APT_MIRROR:-security.debian.org}/g" /etc/apt/sources.list
 ENV GO111MODULE=off
 
+# enable sources for easy cross-compilation of packages
+RUN cp /etc/apt/sources.list /tmp \
+ && sed -i 's/deb /deb-src /g' /tmp/sources.list \ 
+ && cat /tmp/sources.list >> /etc/apt/sources.list \
+ && rm /tmp/*.list
+
+# note that we don't install pkg-config-XXX because its not available for all arches
+RUN cd /usr/bin \
+ && ln -sf ../share/pkg-config-crosswrapper x86_64-linux-gnu-pkg-config \
+ && ln -sf ../share/pkg-config-crosswrapper arm-linux-gnueabi-pkg-config \
+ && ln -sf ../share/pkg-config-crosswrapper aarch64-linux-gnu-pkg-config \
+ && ln -sf ../share/pkg-config-crosswrapper powerpc64-linux-gnu-pkg-config \
+ && ln -sf ../share/pkg-config-crosswrapper powerpc64le-linux-gnu-pkg-config
+
+# build patched golang
+ARG GO_VERSION
+ADD Goppc64-113.patch /tmp/Goppc64-113.patch
+ADD https://golang.org/dl/go$GO_VERSION.src.tar.gz /tmp/go$GO_VERSION.src.tar.gz
+RUN tar xvf /tmp/*.tar.gz && rm /tmp/*.tar.gz \
+ && cd go \
+ && git apply /tmp/*.patch && rm /tmp/*.patch \
+ && cd src \
+ && CGO_ENABLED=1 GOARCH= CC= CXX= ./make.bash \
+ && cd ../.. \
+ && rm -rf /usr/local/go \
+ && mv go /usr/local/go
+
 FROM base AS criu
 ARG DEBIAN_FRONTEND
 # Install dependency packages specific to criu
@@ -115,11 +142,15 @@ ARG DEBIAN_FRONTEND
 RUN dpkg --add-architecture arm64
 RUN dpkg --add-architecture armel
 RUN dpkg --add-architecture armhf
+RUN dpkg --add-architecture ppc64le
+RUN dpkg --add-architecture ppc64
 RUN if [ "$(go env GOHOSTARCH)" = "amd64" ]; then \
         apt-get update && apt-get install -y --no-install-recommends \
         crossbuild-essential-arm64 \
         crossbuild-essential-armel \
         crossbuild-essential-armhf \
+        crossbuild-essential-ppc64el \
+        g++-powerpc64-linux-gnu \
         && rm -rf /var/lib/apt/lists/*; \
     fi
 
@@ -138,18 +169,23 @@ ARG DEBIAN_FRONTEND
 # on non-amd64 systems.
 # Additionally, the crossbuild-amd64 is currently only on debian:buster, so
 # other architectures cannnot crossbuild amd64.
+COPY hack/make/build-dev-packages ./build-dev-packages
 RUN if [ "$(go env GOHOSTARCH)" = "amd64" ]; then \
         apt-get update && apt-get install -y --no-install-recommends \
-            libapparmor-dev:arm64 \
-            libapparmor-dev:armel \
-            libapparmor-dev:armhf \
-            libseccomp-dev:arm64 \
-            libseccomp-dev:armel \
-            libseccomp-dev:armhf \
             # install this arches seccomp here due to compat issues with the v0 builder
             # This is as opposed to inheriting from runtime-dev-cross-false
             libapparmor-dev \
             libseccomp-dev \
+            # install build tools
+            autoconf automake \
+            bison \
+            flex \
+            libtool \
+            # cross-build dev packages from source, as they aren't available for all arches
+            && bash ./build-dev-packages arm-linux-gnueabi \
+            && bash ./build-dev-packages aarch64-linux-gnu \
+            && bash ./build-dev-packages powerpc64le-linux-gnu \
+            && bash ./build-dev-packages powerpc64-linux-gnu \
         && rm -rf /var/lib/apt/lists/*; \
     fi
 

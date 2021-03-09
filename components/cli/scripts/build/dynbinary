@@ -8,7 +8,17 @@ set -eu -o pipefail
 source ./scripts/build/.variables
 
 echo "Building dynamically linked $TARGET"
+
+# -buildmode=pie is not supported on some platforms/arches.
+case "$(go env GOOS)/$(go env GOARCH)" in
+	windows/*|linux/mips*|linux/ppc64)
+		;;
+	*)
+		BUILDFLAGS+=( "-buildmode=pie" )
+		;;
+esac
+
 export CGO_ENABLED=1
-go build -o "${TARGET}" -tags pkcs11 --ldflags "${LDFLAGS}" -buildmode=pie "${SOURCE}"
+go build -o "${TARGET}" -tags pkcs11 --ldflags "${LDFLAGS}" "${BUILDFLAGS}" "${SOURCE}"
 
 ln -sf "$(basename "${TARGET}")" build/docker

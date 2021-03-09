@@ -1,0 +1,36 @@
+set -u
+set -e
+set -x
+
+export TRIPLET=$1
+export CC=$TRIPLET-gcc
+export CXX=$TRIPLET-g++
+
+# cross-compiled libseccomp
+apt-get source libseccomp-dev \
+ && rm *.tar* *.dsc \
+ && cd libseccomp* \
+ && autoreconf \
+ && ./configure \
+        --host $TRIPLET \
+        --prefix /usr \
+        --libdir /usr/lib/$TRIPLET \
+ && make -j 8 \
+ && make install \
+ && cd .. \
+ && rm -rf libseccomp*
+
+# cross-compiled libapparmor
+apt-get source libapparmor-dev \
+ && rm *.tar* *.dsc \
+ && cd apparmor* \
+ && cd libraries/libapparmor \
+ && ./autogen.sh \
+ && ./configure \
+        --host $TRIPLET \
+        --prefix /usr \
+        --libdir /usr/lib/$TRIPLET \
+ && make -j \
+ && make install \
+ && cd .. \
+ && rm -rf apparmor*
