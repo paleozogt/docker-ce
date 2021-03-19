@@ -174,6 +174,7 @@ RUN if [ "$(go env GOHOSTARCH)" = "amd64" ]; then \
         apt-get update && apt-get install -y --no-install-recommends \
             # install this arches seccomp here due to compat issues with the v0 builder
             # This is as opposed to inheriting from runtime-dev-cross-false
+            libbtrfs-dev \
             libapparmor-dev \
             libseccomp-dev \
             # install build tools
@@ -191,58 +192,62 @@ RUN if [ "$(go env GOHOSTARCH)" = "amd64" ]; then \
 
 FROM runtime-dev-cross-${CROSS} AS runtime-dev
 
-FROM base AS tomlv
+FROM runtime-dev AS tomlv
 ENV INSTALL_BINARY_NAME=tomlv
 ARG TOMLV_COMMIT
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
-FROM base AS vndr
+FROM runtime-dev AS vndr
 ENV INSTALL_BINARY_NAME=vndr
 ARG VNDR_COMMIT
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
-FROM dev-base AS containerd
+FROM runtime-dev AS containerd
 ARG DEBIAN_FRONTEND
 ARG CONTAINERD_COMMIT
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libbtrfs-dev \
-    && rm -rf /var/lib/apt/lists/*
 ENV INSTALL_BINARY_NAME=containerd
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
-FROM dev-base AS proxy
+FROM runtime-dev AS proxy
 ENV INSTALL_BINARY_NAME=proxy
 ARG LIBNETWORK_COMMIT
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
-FROM base AS gometalinter
+FROM runtime-dev AS gometalinter
 ENV INSTALL_BINARY_NAME=gometalinter
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+#RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
-FROM base AS gotestsum
+FROM runtime-dev AS gotestsum
 ENV INSTALL_BINARY_NAME=gotestsum
 ARG GOTESTSUM_COMMIT
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
-FROM dev-base AS dockercli
+FROM runtime-dev AS dockercli
 ENV INSTALL_BINARY_NAME=dockercli
 ARG DOCKERCLI_CHANNEL
 ARG DOCKERCLI_VERSION
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS runc
 ENV INSTALL_BINARY_NAME=runc
@@ -251,8 +256,9 @@ ARG RUNC_BUILDTAGS
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
-FROM dev-base AS tini
+FROM runtime-dev AS tini
 ARG DEBIAN_FRONTEND
 ARG TINI_COMMIT
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -263,13 +269,15 @@ COPY hack/dockerfile/install/install.sh ./install.sh
 ENV INSTALL_BINARY_NAME=tini
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
-FROM dev-base AS rootlesskit
+FROM runtime-dev AS rootlesskit
 ENV INSTALL_BINARY_NAME=rootlesskit
 ARG ROOTLESSKIT_COMMIT
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build/ ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 COPY ./contrib/dockerd-rootless.sh /build
 
 FROM djs55/vpnkit@sha256:${VPNKIT_DIGEST} AS vpnkit
@@ -339,6 +347,16 @@ COPY --from=containerd    /build/ /usr/local/bin/
 COPY --from=rootlesskit   /build/ /usr/local/bin/
 COPY --from=vpnkit        /vpnkit /usr/local/bin/vpnkit.x86_64
 COPY --from=proxy         /build/ /usr/local/bin/
+
+COPY --from=dockercli     /build/arm64/ /usr/local/arm64/cli
+COPY --from=tomlv         /build/arm64/ /usr/local/arm64/bin/
+COPY --from=tini          /build/arm64/ /usr/local/arm64/bin/
+COPY --from=vndr          /build/arm64/ /usr/local/arm64/bin/
+COPY --from=gotestsum     /build/arm64/ /usr/local/arm64/bin/
+COPY --from=runc          /build/arm64/ /usr/local/arm64/bin/
+COPY --from=containerd    /build/arm64/ /usr/local/arm64/bin/
+COPY --from=rootlesskit   /build/arm64/ /usr/local/arm64/bin/
+COPY --from=proxy         /build/arm64/ /usr/local/arm64/bin/
 
 ENV PATH=/usr/local/cli:$PATH
 ENV DOCKER_BUILDTAGS apparmor seccomp selinux

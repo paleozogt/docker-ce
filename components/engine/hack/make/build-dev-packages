@@ -6,6 +6,102 @@ export TRIPLET=$1
 export CC=$TRIPLET-gcc
 export CXX=$TRIPLET-g++
 
+# cross-compiled zlib
+apt-get source zlib1g-dev \
+ && rm *.tar* *.dsc \
+ && cd zlib* \
+ && ./configure \
+        --prefix /usr \
+        --bindir /usr/lib/$TRIPLET \
+        --libdir /usr/lib/$TRIPLET \
+ && make -j \
+ && make install \
+ && cd .. \
+ && rm -rf zlib*
+
+# cross-compiled liblzma
+apt-get source liblzma-dev \
+ && rm *.tar* *.dsc \
+ && cd xz* \
+ && ./configure \
+        --host $TRIPLET \
+        --prefix /usr \
+        --bindir /usr/lib/$TRIPLET \
+        --libdir /usr/lib/$TRIPLET \
+ && make -j \
+ && make install \
+ && cd .. \
+ && rm -rf xz*
+
+# cross-compiled libzstd
+apt-get source libzstd-dev \
+ && rm *.tar* *.dsc \
+ && cd libzstd* \
+ && make -j \
+ && make install \
+       PREFIX=/usr \
+       BINDIR=/usr/bin/$TRIPLET \
+       LIBDIR=/usr/lib/$TRIPLET \
+ && cd .. \
+ && rm -rf libzstd*
+
+# cross-compiled liblzo2
+apt-get source liblzo2-dev \
+ && rm *.tar* *.dsc \
+ && cd lzo2* \
+ && ./configure \
+        --host $TRIPLET \
+        --prefix /usr \
+        --bindir /usr/lib/$TRIPLET \
+        --libdir /usr/lib/$TRIPLET \
+ && make -j \
+ && make install \
+ && cd .. \
+ && rm -rf lzo2*
+
+apt-get source libblkid-dev \
+ && rm *.tar* *.dsc \
+ && cd util* \
+ && ./configure \
+        --host $TRIPLET \
+        --prefix /usr \
+        --bindir /usr/lib/$TRIPLET \
+        --libdir /usr/lib/$TRIPLET \
+ && make -j \
+ && make install \
+ && cd .. \
+ && rm -rf util*
+
+# cross-compiled libext2fs
+apt-get source libext2fs-dev \
+ && rm *.tar* *.dsc \
+ && cd e2fs* \
+ && ./configure \
+        --host $TRIPLET \
+        --prefix /usr \
+        --bindir /usr/lib/$TRIPLET \
+        --libdir /usr/lib/$TRIPLET \
+ && make -j \
+ && make install \
+ && cd .. \
+ && rm -rf e2fs*
+
+# cross-compiled libbtrfs
+apt-get source libbtrfs-dev \
+ && rm *.tar* *.dsc \
+ && cd btrfs* \
+ && ./configure \
+        --host $TRIPLET \
+        --prefix /usr \
+        --bindir /usr/lib/$TRIPLET \
+        --libdir /usr/lib/$TRIPLET \
+        --disable-documentation \
+        --disable-python \
+ && make -j \
+ && make install \
+ && cd .. \
+ && rm -rf btrfs*
+
 # cross-compiled libseccomp
 apt-get source libseccomp-dev \
  && rm *.tar* *.dsc \
@@ -14,6 +110,7 @@ apt-get source libseccomp-dev \
  && ./configure \
         --host $TRIPLET \
         --prefix /usr \
+        --bindir /usr/lib/$TRIPLET \
         --libdir /usr/lib/$TRIPLET \
  && make -j 8 \
  && make install \
@@ -29,6 +126,7 @@ apt-get source libapparmor-dev \
  && ./configure \
         --host $TRIPLET \
         --prefix /usr \
+        --bindir /usr/lib/$TRIPLET \
         --libdir /usr/lib/$TRIPLET \
  && make -j \
  && make install \
