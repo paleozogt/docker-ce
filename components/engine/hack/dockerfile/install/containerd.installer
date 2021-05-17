@@ -15,8 +15,17 @@ install_containerd() {
 	(
 
 		export BUILDTAGS='netgo osusergo static_build'
-		export EXTRA_FLAGS='-buildmode=pie'
 		export EXTRA_LDFLAGS='-extldflags "-fno-PIC -static"'
+
+		# -buildmode=pie is not supported on some platforms/arches.
+		case "$(go env GOOS)/$(go env GOARCH)" in
+		       windows/*|linux/mips*|linux/ppc64)
+		               sed -i 's/-buildmode=pie//' Makefile.linux
+		               ;;
+		       *)
+		               EXTRA_FLAGS=( "-buildmode=pie" )
+		               ;;
+		esac
 
 		# Reset build flags to nothing if we want a dynbinary
 		if [ "$1" = "dynamic" ]; then

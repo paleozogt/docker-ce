@@ -198,7 +198,6 @@ ARG TOMLV_COMMIT
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
-RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS vndr
 ENV INSTALL_BINARY_NAME=vndr
@@ -206,7 +205,6 @@ ARG VNDR_COMMIT
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
-RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS containerd
 ARG DEBIAN_FRONTEND
@@ -216,6 +214,7 @@ COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
 RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=ppc64 CC=powerpc64-linux-gnu-gcc CGO_ENABLED=1 PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS proxy
 ENV INSTALL_BINARY_NAME=proxy
@@ -224,13 +223,13 @@ COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
 RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=ppc64 CC=powerpc64-linux-gnu-gcc CGO_ENABLED=1 PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS gometalinter
 ENV INSTALL_BINARY_NAME=gometalinter
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
-#RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS gotestsum
 ENV INSTALL_BINARY_NAME=gotestsum
@@ -238,7 +237,6 @@ ARG GOTESTSUM_COMMIT
 COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
-RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS dockercli
 ENV INSTALL_BINARY_NAME=dockercli
@@ -248,6 +246,7 @@ COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
 RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=ppc64 CC=powerpc64-linux-gnu-gcc CGO_ENABLED=1 PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS runc
 ENV INSTALL_BINARY_NAME=runc
@@ -257,6 +256,7 @@ COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
 RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=ppc64 CC=powerpc64-linux-gnu-gcc CGO_ENABLED=1 PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS tini
 ARG DEBIAN_FRONTEND
@@ -269,7 +269,6 @@ COPY hack/dockerfile/install/install.sh ./install.sh
 ENV INSTALL_BINARY_NAME=tini
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build ./install.sh $INSTALL_BINARY_NAME
-RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 
 FROM runtime-dev AS rootlesskit
 ENV INSTALL_BINARY_NAME=rootlesskit
@@ -278,6 +277,7 @@ COPY hack/dockerfile/install/install.sh ./install.sh
 COPY hack/dockerfile/install/$INSTALL_BINARY_NAME.installer ./
 RUN PREFIX=/build/ ./install.sh $INSTALL_BINARY_NAME
 RUN GOARCH=arm64 CC=aarch64-linux-gnu-gcc PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
+RUN GOARCH=ppc64 CC=powerpc64-linux-gnu-gcc CGO_ENABLED=1 PREFIX=/build/$GOARCH ./install.sh $INSTALL_BINARY_NAME
 COPY ./contrib/dockerd-rootless.sh /build
 
 FROM djs55/vpnkit@sha256:${VPNKIT_DIGEST} AS vpnkit
@@ -349,14 +349,16 @@ COPY --from=vpnkit        /vpnkit /usr/local/bin/vpnkit.x86_64
 COPY --from=proxy         /build/ /usr/local/bin/
 
 COPY --from=dockercli     /build/arm64/ /usr/local/arm64/cli
-COPY --from=tomlv         /build/arm64/ /usr/local/arm64/bin/
-COPY --from=tini          /build/arm64/ /usr/local/arm64/bin/
-COPY --from=vndr          /build/arm64/ /usr/local/arm64/bin/
-COPY --from=gotestsum     /build/arm64/ /usr/local/arm64/bin/
-COPY --from=runc          /build/arm64/ /usr/local/arm64/bin/
 COPY --from=containerd    /build/arm64/ /usr/local/arm64/bin/
+COPY --from=runc          /build/arm64/ /usr/local/arm64/bin/
 COPY --from=rootlesskit   /build/arm64/ /usr/local/arm64/bin/
 COPY --from=proxy         /build/arm64/ /usr/local/arm64/bin/
+
+COPY --from=dockercli     /build/ppc64/ /usr/local/ppc64/cli
+COPY --from=containerd    /build/ppc64/ /usr/local/ppc64/bin/
+COPY --from=runc          /build/ppc64/ /usr/local/ppc64/bin/
+COPY --from=rootlesskit   /build/ppc64/ /usr/local/ppc64/bin/
+COPY --from=proxy         /build/ppc64/ /usr/local/ppc64/bin/
 
 ENV PATH=/usr/local/cli:$PATH
 ENV DOCKER_BUILDTAGS apparmor seccomp selinux
