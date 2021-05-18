@@ -5,10 +5,10 @@ ENGINE_DIR:=$(realpath $(CURDIR)/../../engine)
 PLUGINS_DIR=$(realpath $(CURDIR)/../plugins)
 GITCOMMIT=$(shell cd $(ENGINE_DIR) && git rev-parse --short HEAD)
 STATIC_VERSION:=$(shell ../static/gen-static-ver $(ENGINE_DIR) $(VERSION))
-GO_BASE_IMAGE=golang
-GO_IMAGE?=$(GO_BASE_IMAGE):$(GO_VERSION)-buster
+GO_BASE_IMAGE=paleozogt/golang
+GO_IMAGE?=$(GO_BASE_IMAGE):$(GO_VERSION)-sid
 GEN_RPM_VER=$(shell ./gen-rpm-ver $(CLI_DIR) $(VERSION))
-CHOWN=docker run --rm -i -v $(CURDIR):/v -w /v alpine chown
+CHOWN=docker run --rm -i -v $(CURDIR):/v -w /v paleozogt/debian:sid chown
 
 ifdef BUILD_IMAGE
 	BUILD_IMAGE_FLAG=--build-arg $(BUILD_IMAGE)
@@ -82,7 +82,7 @@ rpmbuild/SOURCES/engine.tgz:
 	docker run --rm -i -w /v \
 		-v $(ENGINE_DIR):/engine \
 		-v $(CURDIR)/rpmbuild/SOURCES:/v \
-		alpine \
+		paleozogt/debian:sid \
 		tar -C / -c -z -f /v/engine.tgz --exclude .git engine
 
 rpmbuild/SOURCES/cli.tgz:
@@ -90,7 +90,7 @@ rpmbuild/SOURCES/cli.tgz:
 	docker run --rm -i -w /v \
 		-v $(CLI_DIR):/cli \
 		-v $(CURDIR)/rpmbuild/SOURCES:/v \
-		alpine \
+		paleozogt/debian:sid \
 		tar -C / -c -z -f /v/cli.tgz --exclude .git cli
 
 rpmbuild/SOURCES/docker.service: ../systemd/docker.service
@@ -105,5 +105,5 @@ rpmbuild/SOURCES/plugin-installers.tgz: $(wildcard ../plugins/*)
 	docker run --rm -i -w /v \
 		-v $(PLUGINS_DIR):/plugins \
 		-v $(CURDIR)/rpmbuild/SOURCES:/v \
-		alpine \
+		paleozogt/debian:sid \
 		tar -C / -c -z -f /v/plugin-installers.tgz --exclude .git plugins

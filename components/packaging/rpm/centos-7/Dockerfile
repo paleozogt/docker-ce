@@ -1,5 +1,5 @@
 ARG GO_IMAGE
-ARG DISTRO=centos
+ARG DISTRO=paleozogt/centos
 ARG SUITE=7
 ARG BUILD_IMAGE=${DISTRO}:${SUITE}
 
@@ -21,7 +21,7 @@ ENV SUITE=${SUITE}
 # In aarch64 (arm64) images, the altarch repo is specified as repository, but
 # failing, so replace the URL.
 RUN if [ -f /etc/yum.repos.d/CentOS-Sources.repo ]; then sed -i 's/altarch/centos/g' /etc/yum.repos.d/CentOS-Sources.repo; fi
-RUN yum install -y rpm-build rpmlint
+RUN yum install -y rpm-build rpmlint yum-utils
 COPY SPECS /root/rpmbuild/SPECS
 RUN yum-builddep -y /root/rpmbuild/SPECS/*.spec
 COPY --from=golang /usr/local/go /usr/local/go

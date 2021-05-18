@@ -22,8 +22,16 @@ install_proxy() {
 }
 
 install_proxy_dynamic() {
-	export PROXY_LDFLAGS="-linkmode=external" install_proxy
-	export BUILD_MODE="-buildmode=pie"
+	# some flags aren't supported on some platforms/arches.
+	case "$(go env GOOS)/$(go env GOARCH)" in
+		windows/*|linux/mips*|linux/ppc64)
+				;;
+		*)
+				export PROXY_LDFLAGS="-linkmode=external" install_proxy
+				export BUILD_MODE="-buildmode=pie"
+				;;
+	esac
+
 	_install_proxy
 }
 
