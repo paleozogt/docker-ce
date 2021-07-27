@@ -18,7 +18,7 @@ Vendor: Docker
 Packager: Docker <support@docker.com>
 
 Requires: docker-ce-cli
-Requires: container-selinux >= 2:2.74
+#Requires: container-selinux >= 2:2.74
 Requires: libseccomp >= 2.3
 Requires: systemd
 %if 0%{?rhel} >= 8
