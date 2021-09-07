@@ -18,6 +18,12 @@ ARG SUITE
 ENV DISTRO=${DISTRO}
 ENV SUITE=${SUITE}
 
+# fix yum for containers
+ARG YUM_REPO_ARG="--disablerepo='*' --enablerepo=base"
+RUN yum $YUM_REPO_ARG install -y yum-plugin-ovl
+RUN yum $YUM_REPO_ARG install -y yum-utils \
+ || yum $YUM_REPO_ARG install -y yum-utils
+
 # In aarch64 (arm64) images, the altarch repo is specified as repository, but
 # failing, so replace the URL.
 RUN if [ -f /etc/yum.repos.d/CentOS-Sources.repo ]; then sed -i 's/altarch/centos/g' /etc/yum.repos.d/CentOS-Sources.repo; fi
